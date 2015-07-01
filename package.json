@@ -1,0 +1,20 @@
+
+{
+    "name": "CentralControlserver"
+  , "version": "0.2.0"
+  , "description": "mamaging the connction between user-side and productServer."
+  , "main": "index.js"
+  , "author": {
+      "name": "Gorden Gao",
+      "email": "jonishaso@hotmail.com"
+    }
+
+  , "readmeFilename": "README.md"
+  ,  "bugs": {
+      "email": "jonishaso@hotmail.com"
+    }
+
+  , "dependencies":{
+      "express":"4.12.X"
+    }
+}
