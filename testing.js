@@ -107,23 +107,26 @@ catch(e){
 finally{
   console.log(remote);
 }
-*/
+
 
 var StringDecoder = require('string_decoder').StringDecoder;
 var decoder = new StringDecoder('utf8');
 
-  var client_user = require("dgram").createSocket("udp4");
-  
-  client_user.bind(9009);
 
-  intevalBroadcast = setInterval(broadcastNew, 1*1000);
-    function broadcastNew(){
-        sendMsg = "07";
-        client_user.send(sendMsg, 0,sendMsg.length,10000,"230.1.2.2");
-        console.log("Sending...");
-    } 
+//  how to kill a child process from parent process with Process id
+//  or object of child process
+var sp = require('child_process').spawn,
+    ls    = sp('node',["../Product/index.js","04"]);
+// ls    = sp('node',["../Product/index.js","04"], {stdio: [null, 1, 'ignore']});
+count = 0;
+ls.stdout.on('data', function (data) {
+  count ++;
+  if(count >= 10) {
+    console.log(count );
+    process.kill(ls.pid,"SIGINT");
+    // ls.kill("SIGABRT");
+  }
+  process.stdout.write('stdout: ' + data);
+});
+*/
 
-  client_user.on("message",function(msg,rinfo){
-    kk = JSON.parse(msg);
-    console.log(kk);
-  });
