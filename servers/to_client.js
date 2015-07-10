@@ -224,9 +224,5 @@ function selectProServer(msg,rinfo,CClist)
     return;
   }
   var version = remote.Product.toString();
-  
-  for(var i = 0; i < CClist.length; i ++)
-  {
-    if()
-  }
+
 }
