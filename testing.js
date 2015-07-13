@@ -128,5 +128,25 @@ ls.stdout.on('data', function (data) {
   }
   process.stdout.write('stdout: ' + data);
 });
+
+var os = require("os");
+
+var ifaces = os.networkInterfaces();
+
+Object.keys(ifaces).forEach(function (ifname)
+{
+  var alias = 0;
+  ifaces[ifname].forEach(function (iface)
+  {
+    if ('IPv4' !== iface.family || iface.internal !== false) return;
+      // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
+      
+    if (alias >= 1) console.log("alias " + ':' + alias, iface.address);
+      // this single interface has multiple ipv4 addresses
+    else console.log("ip address : " +  iface.address);
+      // this interface has only one ipv4 adress      
+  });
+});
 */
 
+console.log(Date().toString().substring(0,15));

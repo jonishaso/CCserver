@@ -5,8 +5,13 @@ var productStartUp = [];//one and only element
 var CClist = [];
 var freshList = [];//first for product list,second for CC list
 var isMaster = false;
+var localIP = [];
 
-exports.openClient = function(userConfig,productConfig,peerConfig){
+exports.openClient = function(userConfig,productConfig,peerConfig)
+{
+
+  localIP = getLocalIP();
+  console.log(localIP);
   var client_user = require("dgram").createSocket("udp4");
   client_user.bind({port:userConfig.listenPort},function(){
     client_user.addMembership(userConfig.listenAddress);
@@ -45,7 +50,8 @@ exports.openClient = function(userConfig,productConfig,peerConfig){
   return client;
 }  
 
-exports.onMessage = function(clients){
+exports.onMessage = function(clients)
+{
   if(productStartUp[0]!=undefined&&productStartUp[0].hasOwnProperty('pid'))
   { 
     process.kill(productStartUp[0].pid,"SIGINT");
@@ -53,25 +59,23 @@ exports.onMessage = function(clients){
     productStartUp.pop();
   }  
   clients.user.on("message",function(msg,rinfo){
-      // selectProServer(msg,rinfo);
-      // clients.user.send(product_version, 0, product_version, 9999, selected_address);
-      console.log(CClist);
-      console.log("receiving....");
+      infomation = selectProServer(msg,rinfo,clients.user);
+      if(undefined != infomation)
+      {
+        mm = information.IPaddress + ":" + information.portNO;
+        clients.user.send(mm, 0, mm.length, 9000, rinfo.address);
+      } 
+      console.log("received user request from " + rinfo.address);
   });
 
   clients.products.on("message",function(msg,rinfo){
     addProductList(msg,rinfo);
-    console.log(proServerList);
+    // console.log(proServerList);
   });
 
   clients.CClist.on("message",function(msg,rinfo){
-    var remote = functions.isPeerMessage(msg,rinfo);
-    if (remote == undefined) {
-        console.log("client CCList received an unexpected message");
-        return;
-    }
-    addCClist(remote);
-    console.log(CClist);
+    addCClist(msg,rinfo);
+    // console.log(CClist);
   });
 
   freshList.push(freshProductList(clients.products));
@@ -80,7 +84,8 @@ exports.onMessage = function(clients){
   console.log("---------clients is on message----------");
 }
 
-exports.offMessage = function(clients){
+exports.offMessage = function(clients)
+{
   if(clients.user._events.hasOwnProperty('message'))
     delete clients.user._events.message;
   if(clients.products._events.hasOwnProperty('message'))
@@ -95,7 +100,28 @@ exports.offMessage = function(clients){
   console.log("--------clients is off message-----------");
 }
 
-autoOpen = function(num){
+getLocalIP = function()
+{
+  var ifaces = require("os").networkInterfaces();
+  var ipList = [];
+  Object.keys(ifaces).forEach(function (ifname)
+  {
+    var alias = 0;
+    ifaces[ifname].forEach(function (iface)
+    {
+      if ('IPv4' !== iface.family || iface.internal !== false) return;
+      // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
+      // if (alias >= 1) this single interface has multiple ipv4 addresses
+      else
+        ipList.push(iface.address);           
+    });
+  });
+  return ipList;
+}
+
+
+autoOpen = function(num)
+{
   var sp = require('child_process').spawn;
   var server = sp('node',["../Product/index.js",num]
               ,{stdio:['ignore',process.stdout,process.stderr]});
@@ -142,15 +168,10 @@ function freshCCList(client)
       });    
       if(0 == CClist.length)
       {
-          // console.log("deleting ..........");
+          console.log("deleting ..........");
           client.on("message",function(msg,rinfo)
-          {
-            var remote = functions.isPeerMessage(msg,rinfo);
-            if (remote == undefined) {
-              console.log("unexpected message");
-              return;
-            }
-            addCClist(remote);
+          { 
+            addCClist(msg,rinfo);
             // console.log(CClist);
           });  
       }
@@ -161,8 +182,20 @@ function freshCCList(client)
 }
 
 
-function addCClist(remote)
+function addCClist(msg, rinfo)
 {
+  for(var i =0; i < localIP.length; i++)
+  {
+    if(rinfo.address === localIP[i])
+       return;
+    else 
+      continue;
+  }
+  var remote = functions.isPeerMessage(msg,rinfo);
+  if (remote == undefined) {
+        console.log("client CCList received an unexpected message");
+        return;
+  }
   flag = false;
   for(var i = 0; i < CClist.length ; i ++){
     if(CClist[i].IPaddress === remote.IPaddress)
@@ -210,7 +243,7 @@ function addProductList(msg,rinfo)
     }
 }
 
-function selectProServer(msg,rinfo,CClist)
+function selectProServer(msg,rinfo,client)
 {
   try
   {
@@ -224,5 +257,32 @@ function selectProServer(msg,rinfo,CClist)
     return;
   }
   var version = remote.Product.toString();
+  for(var i = 0; i < proServerList.length; i++)
+  {
+    if(version == proServerList[i].versionNO)
+    {
+      console.log("send product server information ");
+      return proServerList[i];
+    }
+    else
+      continue;
+  }
+  startRemoteProServer(version,clients);
+  return undefined;
+}
 
+function startRemoteProServer(version,client)
+{
+  for(var i = 0; i < CClist.length; i++)
+  {
+    if(CClist[i].type == "CCserver")
+    {
+      client.send(version,0,version.length,9999,CClist.[i].IPaddress);
+      console.log("start up a new product server :" + version);
+      return;
+    }
+    else
+      continue;
+  }
+  console.log("there is not sufficient server ");
 }
